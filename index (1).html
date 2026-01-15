@@ -1,0 +1,1515 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>링코 출석체크</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* 모바일 최적화 */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        /* 모바일 헤더 */
+        @media (max-width: 768px) {
+            .header {
+                padding: 20px 15px;
+            }
+            
+            .header h1 {
+                font-size: 24px;
+            }
+            
+            .header p {
+                font-size: 12px;
+            }
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        /* 모바일 콘텐츠 */
+        @media (max-width: 768px) {
+            .content {
+                padding: 15px;
+            }
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        /* 모바일 섹션 타이틀 */
+        @media (max-width: 768px) {
+            .section-title {
+                font-size: 18px;
+            }
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        input[type="text"],
+        input[type="date"] {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+            min-width: 0; /* 모바일 오버플로우 방지 */
+        }
+
+        input[type="text"]:focus,
+        input[type="date"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            padding: 12px 25px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            white-space: nowrap; /* 버튼 텍스트 줄바꿈 방지 */
+        }
+
+        /* 모바일 입력 필드 및 버튼 */
+        @media (max-width: 768px) {
+            input[type="text"],
+            input[type="date"] {
+                font-size: 14px;
+                padding: 10px 12px;
+            }
+            
+            button {
+                font-size: 14px;
+                padding: 10px 20px;
+            }
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .members-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        /* 모바일 회원 그리드 */
+        @media (max-width: 768px) {
+            .members-grid {
+                grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+                gap: 10px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .members-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+        }
+
+        .member-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .member-card:hover {
+            background: #e9ecef;
+        }
+
+        .member-card.checked {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+        }
+
+        .member-name {
+            font-weight: 600;
+            font-size: 16px;
+            word-break: keep-all; /* 이름 줄바꿈 방지 */
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* 모바일 회원 카드 */
+        @media (max-width: 768px) {
+            .member-card {
+                padding: 12px;
+            }
+            
+            .member-name {
+                font-size: 14px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .member-card {
+                padding: 10px;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+            
+            .member-name {
+                font-size: 13px;
+            }
+        }
+
+        .check-button {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: white;
+            border: 2px solid #667eea;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: all 0.3s;
+        }
+
+        .member-card.checked .check-button {
+            background: white;
+            color: #667eea;
+        }
+
+        .delete-member {
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 5px 10px;
+            font-size: 12px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        /* 모바일 통계 */
+        @media (max-width: 768px) {
+            .stats {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 10px;
+            }
+            
+            .stat-card {
+                padding: 15px 10px;
+            }
+            
+            .stat-value {
+                font-size: 24px;
+            }
+            
+            .stat-label {
+                font-size: 12px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stat-value {
+                font-size: 20px;
+            }
+            
+            .stat-label {
+                font-size: 11px;
+            }
+        }
+
+        .history-list {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+
+        .history-item {
+            background: #f8f9fa;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .history-date {
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .history-members {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .clear-button {
+            background: #dc3545;
+            margin-left: 10px;
+        }
+
+        .export-button {
+            background: #28a745;
+            margin-left: 10px;
+        }
+
+        .admin-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 20px;
+            border-radius: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            cursor: pointer;
+            z-index: 1000;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        /* 모바일 관리자 토글 */
+        @media (max-width: 768px) {
+            .admin-toggle {
+                top: 10px;
+                right: 10px;
+                font-size: 12px;
+                padding: 8px 15px;
+            }
+        }
+
+        .admin-toggle:hover {
+            background: white;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+        }
+
+        .admin-mode {
+            background: #dc3545 !important;
+            color: white !important;
+        }
+
+        .delete-member {
+            display: none;
+        }
+
+        .admin-active .delete-member {
+            display: inline-block;
+        }
+
+        .admin-only {
+            display: none;
+        }
+
+        .admin-active .admin-only {
+            display: block;
+        }
+
+        .quick-check-section {
+            background: #f0f4ff;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border: 2px solid #667eea;
+        }
+
+        /* 모바일 빠른 체크 */
+        @media (max-width: 768px) {
+            .quick-check-section {
+                padding: 15px;
+                margin: 15px 0;
+            }
+            
+            .quick-check-section h3 {
+                font-size: 14px !important;
+            }
+        }
+
+        .search-filter {
+            margin: 20px 0;
+        }
+
+        .search-filter input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+
+        .search-filter input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .filter-btn {
+            flex: 1;
+            padding: 10px 15px;
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        /* 모바일 필터 버튼 */
+        @media (max-width: 768px) {
+            .filter-buttons {
+                gap: 5px;
+            }
+            
+            .filter-btn {
+                padding: 8px 10px;
+                font-size: 12px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .filter-btn {
+                padding: 8px 5px;
+                font-size: 11px;
+            }
+        }
+
+        .filter-btn:hover {
+            border-color: #667eea;
+        }
+
+        .filter-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+        }
+
+        .filter-btn span {
+            font-weight: bold;
+            margin-left: 5px;
+        }
+
+        .search-suggestions {
+            margin-top: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            background: white;
+            border-radius: 8px;
+        }
+
+        .suggestion-item {
+            padding: 12px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+
+        .suggestion-item:hover {
+            background: #f8f9fa;
+        }
+
+        .suggestion-item.checked {
+            background: #e7f3e7;
+        }
+
+        .suggestion-name {
+            font-weight: 500;
+        }
+
+        .suggestion-status {
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: #dc3545;
+            color: white;
+        }
+
+        .suggestion-status.checked {
+            background: #28a745;
+        }
+
+        .member-card.hidden {
+            display: none;
+        }
+
+        .highlight {
+            background-color: yellow;
+            font-weight: bold;
+        }
+
+        .toast {
+            position: fixed;
+            top: 100px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 40px;
+            border-radius: 50px;
+            box-shadow: 0 10px 40px rgba(102, 126, 234, 0.5);
+            font-size: 18px;
+            font-weight: bold;
+            z-index: 3000;
+            opacity: 0;
+            transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            max-width: 90%;
+        }
+
+        /* 모바일 토스트 */
+        @media (max-width: 768px) {
+            .toast {
+                top: 80px;
+                padding: 15px 25px;
+                font-size: 14px;
+                gap: 10px;
+                border-radius: 30px;
+            }
+            
+            .toast-icon {
+                font-size: 24px !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .toast {
+                top: 70px;
+                padding: 12px 20px;
+                font-size: 13px;
+            }
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .toast-icon {
+            font-size: 32px;
+            animation: bounce 0.6s ease;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+
+        .toast.success {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            box-shadow: 0 10px 40px rgba(40, 167, 69, 0.5);
+        }
+
+        .toast.error {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            box-shadow: 0 10px 40px rgba(220, 53, 69, 0.5);
+        }
+
+        .save-button-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+
+        .save-success-effect {
+            animation: saveSuccess 0.6s ease;
+        }
+
+        @keyframes saveSuccess {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); box-shadow: 0 10px 30px rgba(40, 167, 69, 0.6); }
+            100% { transform: scale(1); }
+        }
+
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background: #667eea;
+            position: absolute;
+            animation: confetti-fall 1s ease-out forwards;
+        }
+
+        @keyframes confetti-fall {
+            to {
+                transform: translateY(100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        .modal-content h3 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        /* 모바일 모달 */
+        @media (max-width: 768px) {
+            .modal-content {
+                padding: 20px;
+                width: 85%;
+            }
+            
+            .modal-content h3 {
+                font-size: 18px;
+                margin-bottom: 15px;
+            }
+        }
+
+        .modal-content input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .modal-buttons button {
+            flex: 1;
+        }
+
+        .cancel-button {
+            background: #6c757d;
+        }
+
+        .excel-button {
+            background: #28a745;
+        }
+
+        @media (max-width: 768px) {
+            .members-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+
+            .input-group {
+                flex-direction: column;
+            }
+
+            .admin-toggle {
+                top: 10px;
+                right: 10px;
+                font-size: 14px;
+                padding: 8px 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 토스트 메시지 -->
+    <div id="toast" class="toast">
+        <span class="toast-icon"></span>
+        <span class="toast-message"></span>
+    </div>
+
+    <!-- 관리자 모드 토글 -->
+    <div class="admin-toggle" id="adminToggle" onclick="toggleAdminMode()">
+        🔒 관리자 모드
+    </div>
+
+    <!-- 비밀번호 입력 모달 -->
+    <div class="modal" id="passwordModal">
+        <div class="modal-content">
+            <h3>🔐 관리자 비밀번호</h3>
+            <input type="password" id="passwordInput" placeholder="비밀번호를 입력하세요">
+            <div class="modal-buttons">
+                <button class="cancel-button" onclick="closePasswordModal()">취소</button>
+                <button onclick="checkPassword()">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container" id="mainContainer">
+        <div class="header">
+            <h1>🎯 링코 출석체크</h1>
+            <p>회원 출석을 체크하고 관리하세요</p>
+        </div>
+
+        <div class="content">
+            <!-- 회원 추가 섹션 -->
+            <div class="section admin-only">
+                <h2 class="section-title">회원 추가</h2>
+                <div class="input-group">
+                    <input type="text" id="memberNameInput" placeholder="회원 이름 입력">
+                    <button onclick="addMember()">회원 추가</button>
+                </div>
+            </div>
+
+            <!-- 출석 체크 섹션 -->
+            <div class="section">
+                <h2 class="section-title">오늘 출석 체크</h2>
+                <div class="input-group">
+                    <input type="date" id="attendanceDate">
+                    <button class="clear-button" onclick="clearToday()">초기화</button>
+                </div>
+                <p style="text-align: center; color: #667eea; font-size: 14px; margin: 10px 0;">
+                    💾 출석 체크 시 자동으로 저장됩니다
+                </p>
+                
+                <!-- 빠른 출석 체크 -->
+                <div class="quick-check-section">
+                    <h3 style="font-size: 16px; margin-bottom: 10px; color: #667eea;">⚡ 빠른 출석 체크</h3>
+                    <div class="input-group">
+                        <input type="text" id="quickCheckInput" placeholder="이름 입력 후 Enter (예: 홍길동)" autocomplete="off">
+                        <button onclick="quickCheck()">출석 체크</button>
+                    </div>
+                    <div id="searchSuggestions" class="search-suggestions"></div>
+                </div>
+
+                <!-- 검색 필터 -->
+                <div class="search-filter">
+                    <input type="text" id="searchInput" placeholder="🔍 회원 검색..." autocomplete="off">
+                    <div class="filter-buttons">
+                        <button class="filter-btn active" onclick="filterMembers('all')">전체 <span id="countAll">0</span></button>
+                        <button class="filter-btn" onclick="filterMembers('checked')">출석 <span id="countChecked">0</span></button>
+                        <button class="filter-btn" onclick="filterMembers('unchecked')">미출석 <span id="countUnchecked">0</span></button>
+                    </div>
+                </div>
+
+                <div class="members-grid" id="membersGrid"></div>
+            </div>
+
+            <!-- 통계 섹션 -->
+            <div class="section">
+                <h2 class="section-title">출석 통계</h2>
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalMembers">0</div>
+                        <div class="stat-label">전체 회원</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="todayAttendance">0</div>
+                        <div class="stat-label">오늘 출석</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="attendanceRate">0%</div>
+                        <div class="stat-label">출석률</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 출석 기록 섹션 -->
+            <div class="section">
+                <h2 class="section-title">출석 기록</h2>
+                <button class="excel-button admin-only" onclick="exportToExcel()">📊 엑셀로 내보내기</button>
+                <div class="history-list" id="historyList"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 데이터 저장소
+        let members = JSON.parse(localStorage.getItem('members')) || [];
+        let attendanceHistory = JSON.parse(localStorage.getItem('attendanceHistory')) || [];
+        let todayAttendance = new Set();
+        let isAdminMode = false;
+        const ADMIN_PASSWORD = localStorage.getItem('adminPassword') || '0227'; // 관리자 비밀번호
+        let currentFilter = 'all'; // 현재 필터 상태
+
+        // 페이지 로드시 초기화
+        window.onload = function() {
+            document.getElementById('attendanceDate').valueAsDate = new Date();
+            loadAttendanceForDate(); // 오늘 날짜의 출석 기록 불러오기
+            renderMembers();
+            updateStats();
+            renderHistory();
+            updateFilterCounts();
+            setupSearchListeners();
+            
+            // 날짜 변경 시 해당 날짜의 출석 기록 불러오기
+            document.getElementById('attendanceDate').addEventListener('change', function() {
+                loadAttendanceForDate();
+            });
+        };
+
+        // 선택된 날짜의 출석 기록 불러오기
+        function loadAttendanceForDate() {
+            const selectedDate = document.getElementById('attendanceDate').value;
+            const record = attendanceHistory.find(h => h.date === selectedDate);
+            
+            todayAttendance.clear();
+            
+            if (record) {
+                record.members.forEach(member => {
+                    todayAttendance.add(member);
+                });
+            }
+            
+            renderMembers();
+            updateStats();
+            updateFilterCounts();
+        }
+
+        // 토스트 메시지 표시
+        function showToast(message, type = 'success', icon = '✓') {
+            const toast = document.getElementById('toast');
+            const toastIcon = toast.querySelector('.toast-icon');
+            const toastMessage = toast.querySelector('.toast-message');
+            
+            toastIcon.textContent = icon;
+            toastMessage.textContent = message;
+            
+            // 타입에 따라 클래스 변경
+            toast.className = 'toast';
+            if (type === 'success') {
+                toast.classList.add('success');
+            } else if (type === 'error') {
+                toast.classList.add('error');
+            }
+            
+            // 토스트 표시
+            setTimeout(() => {
+                toast.classList.add('show');
+            }, 100);
+            
+            // 3초 후 숨김
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // 컨페티 효과
+        function createConfetti() {
+            const colors = ['#667eea', '#764ba2', '#28a745', '#ffc107', '#dc3545', '#17a2b8'];
+            const confettiCount = 50;
+            
+            for (let i = 0; i < confettiCount; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = Math.random() * 100 + 'vw';
+                confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.animationDelay = Math.random() * 0.3 + 's';
+                confetti.style.animationDuration = (Math.random() * 0.5 + 0.5) + 's';
+                
+                document.body.appendChild(confetti);
+                
+                // 애니메이션 종료 후 제거
+                setTimeout(() => {
+                    confetti.remove();
+                }, 1500);
+            }
+        }
+
+        // 버튼 성공 효과
+        function buttonSuccessEffect() {
+            const saveButton = document.getElementById('saveButton');
+            saveButton.classList.add('save-success-effect');
+            
+            setTimeout(() => {
+                saveButton.classList.remove('save-success-effect');
+            }, 600);
+        }
+
+        // 검색 리스너 설정
+        function setupSearchListeners() {
+            const searchInput = document.getElementById('searchInput');
+            const quickCheckInput = document.getElementById('quickCheckInput');
+
+            searchInput.addEventListener('input', function() {
+                filterAndSearchMembers();
+            });
+
+            quickCheckInput.addEventListener('input', function() {
+                showSearchSuggestions(this.value);
+            });
+
+            quickCheckInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    quickCheck();
+                }
+            });
+        }
+
+        // 빠른 출석 체크
+        function quickCheck() {
+            const input = document.getElementById('quickCheckInput');
+            const name = input.value.trim();
+
+            if (name === '') {
+                showToast('이름을 입력해주세요.', 'error', '⚠️');
+                return;
+            }
+
+            const foundMember = members.find(m => m.toLowerCase() === name.toLowerCase());
+
+            if (!foundMember) {
+                showToast('등록되지 않은 회원입니다.', 'error', '❌');
+                return;
+            }
+
+            if (todayAttendance.has(foundMember)) {
+                todayAttendance.delete(foundMember);
+                showToast(`${foundMember}님 출석이 취소되었습니다.`, 'error', '↩️');
+            } else {
+                todayAttendance.add(foundMember);
+                showToast(`${foundMember}님 출석 완료!`, 'success', '✓');
+            }
+
+            input.value = '';
+            document.getElementById('searchSuggestions').innerHTML = '';
+            renderMembers();
+            updateStats();
+            updateFilterCounts();
+            
+            // 자동 저장
+            autoSaveAttendance();
+        }
+
+        // 검색 자동완성 표시
+        function showSearchSuggestions(query) {
+            const suggestionsDiv = document.getElementById('searchSuggestions');
+            
+            if (query.trim() === '') {
+                suggestionsDiv.innerHTML = '';
+                return;
+            }
+
+            const filtered = members.filter(m => 
+                m.toLowerCase().includes(query.toLowerCase())
+            );
+
+            if (filtered.length === 0) {
+                suggestionsDiv.innerHTML = '<div style="padding: 15px; text-align: center; color: #999;">검색 결과가 없습니다.</div>';
+                return;
+            }
+
+            suggestionsDiv.innerHTML = filtered.map(member => {
+                const isChecked = todayAttendance.has(member);
+                const highlightedName = member.replace(
+                    new RegExp(query, 'gi'), 
+                    match => `<span class="highlight">${match}</span>`
+                );
+                
+                return `
+                    <div class="suggestion-item ${isChecked ? 'checked' : ''}" onclick="selectSuggestion('${member}')">
+                        <span class="suggestion-name">${highlightedName}</span>
+                        <span class="suggestion-status ${isChecked ? 'checked' : ''}">${isChecked ? '✓ 출석' : '미출석'}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 자동완성 항목 선택
+        function selectSuggestion(name) {
+            document.getElementById('quickCheckInput').value = name;
+            document.getElementById('searchSuggestions').innerHTML = '';
+            quickCheck();
+        }
+
+        // 필터 변경
+        function filterMembers(filter) {
+            currentFilter = filter;
+            
+            // 버튼 활성화 상태 변경
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            filterAndSearchMembers();
+        }
+
+        // 필터와 검색 동시 적용
+        function filterAndSearchMembers() {
+            const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+            const cards = document.querySelectorAll('.member-card');
+
+            cards.forEach(card => {
+                const name = card.querySelector('.member-name').textContent.toLowerCase();
+                const isChecked = card.classList.contains('checked');
+
+                // 검색 필터
+                const matchesSearch = name.includes(searchQuery);
+
+                // 상태 필터
+                let matchesFilter = true;
+                if (currentFilter === 'checked') {
+                    matchesFilter = isChecked;
+                } else if (currentFilter === 'unchecked') {
+                    matchesFilter = !isChecked;
+                }
+
+                // 둘 다 만족하면 표시
+                if (matchesSearch && matchesFilter) {
+                    card.classList.remove('hidden');
+                } else {
+                    card.classList.add('hidden');
+                }
+            });
+        }
+
+        // 필터 카운트 업데이트
+        function updateFilterCounts() {
+            const total = members.length;
+            const checked = todayAttendance.size;
+            const unchecked = total - checked;
+
+            document.getElementById('countAll').textContent = total;
+            document.getElementById('countChecked').textContent = checked;
+            document.getElementById('countUnchecked').textContent = unchecked;
+        }
+
+        // 관리자 모드 토글
+        function toggleAdminMode() {
+            if (!isAdminMode) {
+                document.getElementById('passwordModal').classList.add('show');
+            } else {
+                isAdminMode = false;
+                document.getElementById('mainContainer').classList.remove('admin-active');
+                document.getElementById('adminToggle').textContent = '🔒 관리자 모드';
+                document.getElementById('adminToggle').classList.remove('admin-mode');
+            }
+        }
+
+        // 비밀번호 모달 닫기
+        function closePasswordModal() {
+            document.getElementById('passwordModal').classList.remove('show');
+            document.getElementById('passwordInput').value = '';
+        }
+
+        // 비밀번호 확인
+        function checkPassword() {
+            const inputPassword = document.getElementById('passwordInput').value;
+            
+            if (inputPassword === ADMIN_PASSWORD) {
+                isAdminMode = true;
+                document.getElementById('mainContainer').classList.add('admin-active');
+                document.getElementById('adminToggle').textContent = '🔓 일반 모드';
+                document.getElementById('adminToggle').classList.add('admin-mode');
+                closePasswordModal();
+                alert('관리자 모드가 활성화되었습니다.');
+            } else {
+                alert('비밀번호가 틀렸습니다.');
+            }
+        }
+
+        // Enter 키로 비밀번호 확인
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('passwordInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    checkPassword();
+                }
+            });
+        });
+
+        // 회원 추가
+        function addMember() {
+            if (!isAdminMode) {
+                alert('관리자 모드에서만 회원을 추가할 수 있습니다.');
+                return;
+            }
+
+            const input = document.getElementById('memberNameInput');
+            const name = input.value.trim();
+            
+            if (name === '') {
+                alert('회원 이름을 입력해주세요.');
+                return;
+            }
+
+            if (members.includes(name)) {
+                alert('이미 등록된 회원입니다.');
+                return;
+            }
+
+            members.push(name);
+            localStorage.setItem('members', JSON.stringify(members));
+            input.value = '';
+            renderMembers();
+            updateStats();
+        }
+
+        // 회원 삭제
+        function deleteMember(name) {
+            if (!isAdminMode) {
+                alert('관리자 모드에서만 삭제할 수 있습니다.');
+                return;
+            }
+
+            if (confirm(`${name} 회원을 삭제하시겠습니까?`)) {
+                members = members.filter(m => m !== name);
+                localStorage.setItem('members', JSON.stringify(members));
+                todayAttendance.delete(name);
+                renderMembers();
+                updateStats();
+            }
+        }
+
+        // 출석 토글
+        function toggleAttendance(name) {
+            if (todayAttendance.has(name)) {
+                todayAttendance.delete(name);
+            } else {
+                todayAttendance.add(name);
+            }
+            renderMembers();
+            updateStats();
+            
+            // 자동 저장
+            autoSaveAttendance();
+        }
+
+        // 회원 목록 렌더링
+        function renderMembers() {
+            const grid = document.getElementById('membersGrid');
+            grid.innerHTML = '';
+
+            // 회원을 이름순으로 정렬
+            const sortedMembers = [...members].sort((a, b) => a.localeCompare(b, 'ko'));
+
+            sortedMembers.forEach(member => {
+                const card = document.createElement('div');
+                card.className = 'member-card' + (todayAttendance.has(member) ? ' checked' : '');
+                
+                card.innerHTML = `
+                    <span class="member-name">${member}</span>
+                    <div>
+                        <button class="check-button" onclick="toggleAttendance('${member}')">
+                            ${todayAttendance.has(member) ? '✓' : ''}
+                        </button>
+                        <button class="delete-member" onclick="deleteMember('${member}')">×</button>
+                    </div>
+                `;
+                
+                grid.appendChild(card);
+            });
+
+            // 렌더링 후 필터 적용
+            filterAndSearchMembers();
+        }
+
+        // 통계 업데이트
+        function updateStats() {
+            document.getElementById('totalMembers').textContent = members.length;
+            document.getElementById('todayAttendance').textContent = todayAttendance.size;
+            
+            const rate = members.length > 0 
+                ? Math.round((todayAttendance.size / members.length) * 100) 
+                : 0;
+            document.getElementById('attendanceRate').textContent = rate + '%';
+            
+            updateFilterCounts();
+        }
+
+        // 자동 저장 함수
+        function autoSaveAttendance() {
+            // 출석 체크가 없으면 저장하지 않음
+            if (todayAttendance.size === 0) {
+                // 출석이 모두 취소된 경우, 해당 날짜 기록 삭제
+                const date = document.getElementById('attendanceDate').value;
+                attendanceHistory = attendanceHistory.filter(h => h.date !== date);
+                localStorage.setItem('attendanceHistory', JSON.stringify(attendanceHistory));
+                renderHistory();
+                return;
+            }
+
+            const date = document.getElementById('attendanceDate').value;
+            const attendanceRecord = {
+                date: date,
+                members: Array.from(todayAttendance),
+                total: members.length
+            };
+
+            // 같은 날짜가 있으면 덮어쓰기
+            attendanceHistory = attendanceHistory.filter(h => h.date !== date);
+            attendanceHistory.unshift(attendanceRecord);
+            
+            localStorage.setItem('attendanceHistory', JSON.stringify(attendanceHistory));
+            renderHistory();
+        }
+
+        // 출석 저장 (수동 저장 - 더 이상 사용되지 않지만 호환성을 위해 유지)
+        function saveAttendance() {
+            if (todayAttendance.size === 0) {
+                showToast('출석 체크된 회원이 없습니다.', 'error', '⚠️');
+                return;
+            }
+
+            const date = document.getElementById('attendanceDate').value;
+            const attendanceRecord = {
+                date: date,
+                members: Array.from(todayAttendance),
+                total: members.length
+            };
+
+            // 같은 날짜가 있으면 덮어쓰기
+            attendanceHistory = attendanceHistory.filter(h => h.date !== date);
+            attendanceHistory.unshift(attendanceRecord);
+            
+            localStorage.setItem('attendanceHistory', JSON.stringify(attendanceHistory));
+            
+            // 성공 효과들 실행
+            buttonSuccessEffect();
+            createConfetti();
+            showToast(`${date} 출석이 저장되었습니다! (${todayAttendance.size}명)`, 'success', '🎉');
+            
+            renderHistory();
+        }
+
+        // 오늘 출석 초기화
+        function clearToday() {
+            if (confirm('오늘 출석을 초기화하시겠습니까?')) {
+                todayAttendance.clear();
+                renderMembers();
+                updateStats();
+                
+                // 자동 저장 (출석 기록 삭제)
+                autoSaveAttendance();
+                
+                showToast('출석이 초기화되었습니다.', 'success', '🔄');
+            }
+        }
+
+        // 출석 기록 렌더링
+        function renderHistory() {
+            const historyList = document.getElementById('historyList');
+            historyList.innerHTML = '';
+
+            if (attendanceHistory.length === 0) {
+                historyList.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">출석 기록이 없습니다.</p>';
+                return;
+            }
+
+            attendanceHistory.forEach(record => {
+                const item = document.createElement('div');
+                item.className = 'history-item';
+                
+                const rate = Math.round((record.members.length / record.total) * 100);
+                
+                item.innerHTML = `
+                    <div class="history-date">${record.date} - ${record.members.length}/${record.total}명 (${rate}%)</div>
+                    <div class="history-members">${record.members.join(', ')}</div>
+                `;
+                
+                historyList.appendChild(item);
+            });
+        }
+
+        // 엑셀로 내보내기
+        function exportToExcel() {
+            // 관리자 권한 체크
+            if (!isAdminMode) {
+                showToast('관리자 모드에서만 사용할 수 있습니다.', 'error', '🔒');
+                return;
+            }
+
+            if (attendanceHistory.length === 0) {
+                showToast('출석 기록이 없습니다.', 'error', '⚠️');
+                return;
+            }
+
+            // 워크북 생성
+            const wb = XLSX.utils.book_new();
+
+            // 1. 날짜별 출석 현황 시트 (참가자별 행 분리)
+            const attendanceData = [
+                ['날짜', '회원명', '출석여부', '총 출석인원', '총 회원수', '출석률']
+            ];
+
+            // 모든 날짜와 회원의 조합 생성
+            attendanceHistory.forEach(record => {
+                const rate = Math.round((record.members.length / record.total) * 100);
+                
+                // 출석한 회원들
+                record.members.forEach(member => {
+                    attendanceData.push([
+                        record.date,
+                        member,
+                        'O',
+                        record.members.length,
+                        record.total,
+                        rate + '%'
+                    ]);
+                });
+                
+                // 미출석 회원들 (전체 회원 목록에서 출석자를 제외)
+                const absentMembers = members.filter(m => !record.members.includes(m));
+                absentMembers.forEach(member => {
+                    attendanceData.push([
+                        record.date,
+                        member,
+                        'X',
+                        record.members.length,
+                        record.total,
+                        rate + '%'
+                    ]);
+                });
+            });
+
+            // 날짜별 출석 현황 시트 생성
+            const ws1 = XLSX.utils.aoa_to_sheet(attendanceData);
+            
+            // 열 너비 설정
+            ws1['!cols'] = [
+                { wch: 12 },  // 날짜
+                { wch: 15 },  // 회원명
+                { wch: 10 },  // 출석여부
+                { wch: 12 },  // 총 출석인원
+                { wch: 12 },  // 총 회원수
+                { wch: 10 }   // 출석률
+            ];
+
+            // 자동 필터 설정 (첫 번째 행)
+            ws1['!autofilter'] = { ref: XLSX.utils.encode_range({
+                s: { r: 0, c: 0 },
+                e: { r: attendanceData.length - 1, c: 5 }
+            })};
+
+            XLSX.utils.book_append_sheet(wb, ws1, '날짜별 출석 현황');
+
+            // 2. 회원별 출석 통계 시트
+            const memberStats = {};
+            members.forEach(member => {
+                memberStats[member] = {
+                    total: 0,
+                    attended: 0,
+                    dates: []
+                };
+            });
+
+            attendanceHistory.forEach(record => {
+                record.members.forEach(member => {
+                    if (memberStats[member]) {
+                        memberStats[member].attended++;
+                        memberStats[member].dates.push(record.date);
+                    }
+                });
+                
+                // 전체 회원의 total 카운트 증가
+                Object.keys(memberStats).forEach(member => {
+                    memberStats[member].total++;
+                });
+            });
+
+            const memberData = [
+                ['회원명', '출석 횟수', '전체 모임 수', '출석률', '최근 출석일']
+            ];
+
+            Object.keys(memberStats).sort((a, b) => a.localeCompare(b, 'ko')).forEach(member => {
+                const stats = memberStats[member];
+                const rate = stats.total > 0 
+                    ? Math.round((stats.attended / stats.total) * 100) 
+                    : 0;
+                
+                const lastAttendance = stats.dates.length > 0 
+                    ? stats.dates.sort().reverse()[0] 
+                    : '-';
+                
+                memberData.push([
+                    member,
+                    stats.attended,
+                    stats.total,
+                    rate + '%',
+                    lastAttendance
+                ]);
+            });
+
+            // 회원별 통계 시트 생성
+            const ws2 = XLSX.utils.aoa_to_sheet(memberData);
+            
+            // 열 너비 설정
+            ws2['!cols'] = [
+                { wch: 15 },  // 회원명
+                { wch: 12 },  // 출석 횟수
+                { wch: 12 },  // 전체 모임 수
+                { wch: 10 },  // 출석률
+                { wch: 15 }   // 최근 출석일
+            ];
+
+            // 자동 필터 설정
+            ws2['!autofilter'] = { ref: XLSX.utils.encode_range({
+                s: { r: 0, c: 0 },
+                e: { r: memberData.length - 1, c: 4 }
+            })};
+
+            XLSX.utils.book_append_sheet(wb, ws2, '회원별 통계');
+
+            // 3. 회원별 출석 상세 내역 시트
+            const detailData = [
+                ['회원명', '날짜', '출석여부']
+            ];
+
+            // 회원별로 정렬하여 모든 날짜의 출석 기록 생성
+            members.sort((a, b) => a.localeCompare(b, 'ko')).forEach(member => {
+                attendanceHistory.forEach(record => {
+                    const attended = record.members.includes(member) ? 'O' : 'X';
+                    detailData.push([
+                        member,
+                        record.date,
+                        attended
+                    ]);
+                });
+            });
+
+            const ws3 = XLSX.utils.aoa_to_sheet(detailData);
+            
+            // 열 너비 설정
+            ws3['!cols'] = [
+                { wch: 15 },  // 회원명
+                { wch: 12 },  // 날짜
+                { wch: 10 }   // 출석여부
+            ];
+
+            // 자동 필터 설정
+            ws3['!autofilter'] = { ref: XLSX.utils.encode_range({
+                s: { r: 0, c: 0 },
+                e: { r: detailData.length - 1, c: 2 }
+            })};
+
+            XLSX.utils.book_append_sheet(wb, ws3, '회원별 출석 상세');
+
+            // 파일 다운로드
+            const fileName = `링코_출석부_${new Date().toISOString().split('T')[0]}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+            
+            showToast('엑셀 파일이 다운로드되었습니다!', 'success', '📊');
+        }
+
+        // Enter 키로 회원 추가
+        document.getElementById('memberNameInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addMember();
+            }
+        });
+    </script>
+</body>
+</html>
